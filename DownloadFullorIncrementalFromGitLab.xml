@@ -1,10 +1,7 @@
-<project name="CumminsDownloadFullorIncrementalFromgitlab" default="downloadsource">
+<project name="DownloadFullorIncrementalFromgitlab" default="downloadsource">
 	<description>
-        	Cummins Project Build File for Downloading Full or Incremental Build From gitlab
+        	Project Build File for Downloading Full or Incremental Build From gitlab
     </description>
-	<!-- 
-	ant -f CumminsDownloadFullorIncrementalFromGitLab.xml downloadsource -DearlierSHAdeployed=1bb86cb1  -DnewSHAtodeploy=990f4902 -Dgitbranch=11.0cbuAllTeam   -Dgituserid=qu396 -Dgitpwd=Login1234 -Denvtype=DEVUNIX -Dgitlabinstalldir=/opt/tools/ptc/gitlab -Dbasedirgit=/opt/tools/ptc/gitlab/builddownloads 
-	-->
 	
 	<property name="earlierSHAdeployed" value="${earlierSHAdeployed}" />
 	<property name="newSHAtodeploy" value="${newSHAtodeploy}" />
@@ -115,34 +112,20 @@
 	<target name="downloadsource" description="Downloads the incremental changes from gitlab">
 	
 		
-		<!-- START - INITIALIZING AND DOWNLOADING THE ORIGIN OR THE TOPMOST BRANCH CODE. THIS IS NOT THE ACTUAL BRANCH WE NEED! THAT IS LATER
-			WE ONLY DO THIS THE FIST TIME		-->
-		
-		<!-- first we  cleanp, since not cleaning up was causing some issues in download -->
-		<!-- delete dir="${gitlabinstalldir}/../../builds/gitlab/windchill" failonerror="false" /  -->
-		
-		<!-- BASE COMMANDS OF WHAT WE ARE TRYING TO DO BELOW ARE
-		git init   (to prep the local folder as a git repo)
-		git clone URL (First time only we do a full download. This downloads only from origin(topmost branch) and NOT from the branch we really want. This takes approx 1-5 mins first time)
-		Next, below commands must be run within the windchill folder (Repo name) post clone
-		git checkout newsha (to prep the HEAD pointer to newsha commit id + download the code for this new commit)
-		git diff -name-only oldsha newsha -diff-filter=AXMRTUXB  (this output we write to a file shadifferences.txt which has list of files that are different b/w the 2 commits, separated by newline character. We strip the newlines out to a single line with spaces. This is written to a property shadifferences
-		git archive -output=filename HEAD <shadifferences>  (this will zip the data from current commit (HEAD is now newsha) based on above files listed in shadifferences property)
-		
-		-->
+		<!-- START - INITIALIZING AND DOWNLOADING THE ORIGIN OR THE TOPMOST BRANCH CODE. THIS IS NOT THE ACTUAL BRANCH WE NEED! THAT IS LATER -->
 		
 		<if>
-			<available file="${gitlabinstalldir}/builddownloads/${envtype}/windchill" type="dir" />
+			<available file="${gitlabinstalldir}/builddownloads/${envtype}/<reponame>" type="dir" />
 			<then>
-				<echo message="windchill repo related directory exists, deleting it to reset." />
+				<echo message="<reponame> repo related directory exists, deleting it to reset." />
 				<delete includeEmptyDirs="true">
-					<fileset dir="${gitlabinstalldir}/builddownloads/${envtype}/windchill" includes="**/*" defaultexcludes="no"/>
+					<fileset dir="${gitlabinstalldir}/builddownloads/${envtype}/<reponame>" includes="**/*" defaultexcludes="no"/>
 				</delete>
 				<git command="init" dir="${basedirgit}/${envtype}" />
 				
 				<git command="clone" dir="${basedirgit}/${envtype}">
 				<args>
-					<arg value="https://${gituserid}:${gitpwd}@gitlab.cummins.com/corpit/plm/windchill.git" />
+					<arg value="https://${gituserid}:${gitpwd}@{gitlab_repo_URL}/<reponame>.git" />
 				</args>
 				</git>
 			</then>
@@ -151,7 +134,7 @@
 				<git command="clone" dir="${basedirgit}/${envtype}"> 
 				
 				<args>
-					<arg value="https://${gituserid}:${gitpwd}@gitlab.cummins.com/corpit/plm/windchill.git" />
+					<arg value="https://${gituserid}:${gitpwd}@{gitlab_repo_URL}/corpit/plm/<reponame>.git" />
 				</args>
 				</git>	
 			</else>
@@ -160,19 +143,19 @@
 		<!-- git command="init" dir="${basedirgit}/${envtype}" /  -->
 				
 		
-		<!-- DOWNLOADS FROM ORIGIN AND CREATES A folder called windchill/Windchill where windchill is repo name and Windchill is the actualy Windchill folder of our code -->
+		<!-- DOWNLOADS FROM ORIGIN AND CREATES A folder called <reponame>/<reponame> where <reponame> is repo name and <reponame> is the actualy <reponame> folder of our code -->
 		
 		
 		<!-- git command="clone" dir="${basedirgit}/${envtype}"> 
 				<args>
-						<arg value="https://${gituserid}:${gitpwd}@gitlab.cummins.com/corpit/plm/windchill.git" />
+						<arg value="https://${gituserid}:${gitpwd}@{gitlab_repo_URL}/corpit/plm/<reponame>.git" />
 				</args>
 		</git -->	
 		
 		<!-- END - INITIALIZING AND DOWNLOADING THE ORIGIN CODE. THIS IS NOT THE ACTUAL BRANCH WE NEED! THAT IS LATER -->
 		
 		<!-- HEAD GETS SET TO newSHAtodeploy HERE AND DOWNLOADS the code upto the new commit -->
-		<git command="checkout" dir="${basedirgit}/${envtype}/windchill">
+		<git command="checkout" dir="${basedirgit}/${envtype}/<reponame>">
 			<args>
 				<arg value="${newSHAtodeploy}" />
 			</args>
@@ -189,7 +172,7 @@
 		<!-- start  - CREATE A zip OF DIFFERENTIAL COMMITS BW 2 SHA NUMBERS -->
 	
 		<!-- BELOW WILL GIVE A LINE SEPARATED LIST OF (RELATIVE) FILEPATH AND FILENAME OF CHANGED FILES BW 2 COMMITS -->
-		<git command="diff" dir="${basedirgit}/${envtype}/windchill" output="${basedirgit}/${envtype}/windchill/shadifferences.txt">
+		<git command="diff" dir="${basedirgit}/${envtype}/<reponame>" output="${basedirgit}/${envtype}/<reponame>/shadifferences.txt">
             	<args>
                 <arg value="--name-only" />
 				<arg value="${earlierSHAdeployed}"/>
@@ -201,7 +184,7 @@
 		<if>
 		<equals arg1="${osfamily}" arg2="UNIX" />
 		<then>
-			<chmod file="${basedirgit}/${envtype}/windchill/shadifferences.txt" perm="777"/>
+			<chmod file="${basedirgit}/${envtype}/<reponame>/shadifferences.txt" perm="777"/>
 		</then>
 		</if>
 						
@@ -214,14 +197,14 @@
 				
 		<!-- below is from the ant contrib jar that we imported above -->
 		<!-- first we replace linebreak with spaces in the same file -->
-		<replaceregexp file="${basedirgit}/${envtype}/windchill/shadifferences.txt"
+		<replaceregexp file="${basedirgit}/${envtype}/<reponame>/shadifferences.txt"
 		match="${line.separator}"
         flags="g"
         replace=" " 
         />
 		
 		<!-- below will convert all content of the txt file to a single property -->
-		<loadfile property="shadifferences" srcfile="${basedirgit}/${envtype}/windchill/shadifferences.txt">
+		<loadfile property="shadifferences" srcfile="${basedirgit}/${envtype}/<reponame>/shadifferences.txt">
 		<filterchain>
 		<striplinebreaks/>
 		</filterchain>
@@ -230,7 +213,7 @@
 		<if>
 		<equals arg1="${osfamily}" arg2="UNIX" />
 		<then>
-			<chmod file="${basedirgit}/${envtype}/windchill/shadifferences.txt" perm="777"/>
+			<chmod file="${basedirgit}/${envtype}/<reponame>/shadifferences.txt" perm="777"/>
 		</then>
 		</if>
 	
@@ -240,7 +223,7 @@
 		<!--foreach param="secondscounter" list="80,70,60,50,40,30,20,10" target="countdowntimer"/-->
 		</sequential>
 		
-		<git command="archive" dir="${basedirgit}/${envtype}/windchill">
+		<git command="archive" dir="${basedirgit}/${envtype}/<reponame>">
             		<args>
             			<arg value="--output=../${gitbranch}_${earlierSHAdeployed}_${newSHAtodeploy}.zip" />
             			<arg value="HEAD" />
@@ -252,9 +235,7 @@
 		
 		<copy file="${basedirgit}/${envtype}/${gitbranch}_${earlierSHAdeployed}_${newSHAtodeploy}.zip" todir="${env.WORKSPACE}"
 		overwrite="true" failonerror="false" quiet="true"/>
-		
-		<copy file="${basedirgit}/${envtype}/windchill/Windchill/CumminsBuild.xml" todir="${env.WORKSPACE}"
-		overwrite="true" failonerror="false" quiet="true"/>
+	
 		
 		<delete file="${basedirgit}/${envtype}/SHA_details.txt"/>
                 <touch file="${basedirgit}/${envtype}/SHA_details.txt"/>
@@ -276,7 +257,6 @@
 			<fileset dir="${gitlabinstalldir}/../../builds/gitlab/unzipofcurrentbuild" includes="**/*"/>
 		</delete-->
 		
-		<!-- finally, unzip the changed code to below location for the next ant script (CumminsBuild.xml) that is called from MasterBuild.xml -->
 	
 		<!--unzip src="${gitlabinstalldir}/../../builds/gitlab/incrementalbuildjars/${envtype}_${gitbranch}_${earlierSHAdeployed}_${newSHAtodeploy}_${TODAY}.zip"
        			dest="/${gitlabinstalldir}/../../builds/gitlab/unzipofcurrentbuild">
@@ -305,7 +285,7 @@
 	<target name="ScanForSQLFiles">
 			<foreach target="sqlFileFound" param="sqlFile">
 				<path>
-					<fileset dir="${basedirgit}/${envtype/windchill/Windchill" casesensitive="yes">
+					<fileset dir="${basedirgit}/${envtype}/<reponame>/<reponame>" casesensitive="yes">
 					<include name="**/*.sql"/>
 					</fileset>
 				</path>
